@@ -149,6 +149,32 @@ func TestStore_BankStocks(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("zeroed stocks return 400 not 404, wallets unaffected", func(t *testing.T) {
+		//   Scenario:
+		//   1. wallet buys stock1
+		//   2. POST /stocks with only stock2 — stock1 is zeroed, not deleted
+		//   3. buying stock1 must return ErrNoBankStock (400), not ErrStockNotFound (404)
+		//   4. buying stock2 (introduced with qty 0) must also return ErrNoBankStock (400)
+		//   5. wallet can still sell stock1 (wallets are untouched by SetBankStocks)
+		store := newStore(t)
+		clearDB(t)
+
+		require.NoError(t, store.SetBankStocks(context.Background(), []models.Stock{{Name: "stock1", Quantity: 5}}))
+		require.NoError(t, store.ApplyWalletOperation(context.Background(), "wallet1", "stock1", "buy"))
+
+		// POST /stocks with only stock2; stock1 is not listed — it gets zeroed, not deleted.
+		require.NoError(t, store.SetBankStocks(context.Background(), []models.Stock{{Name: "stock2", Quantity: 0}}))
+
+		err := store.ApplyWalletOperation(context.Background(), "wallet2", "stock1", "buy")
+		assert.ErrorIs(t, err, repository.ErrNoBankStock, "stock1 zeroed by SetBankStocks should give 400 not 404")
+
+		err = store.ApplyWalletOperation(context.Background(), "wallet2", "stock2", "buy")
+		assert.ErrorIs(t, err, repository.ErrNoBankStock, "stock2 introduced with qty=0 should give 400 not 404")
+
+		// Wallet still holds stock1; selling it back to the bank must succeed.
+		require.NoError(t, store.ApplyWalletOperation(context.Background(), "wallet1", "stock1", "sell"))
+	})
 }
 
 func TestStore_Buy(t *testing.T) {
