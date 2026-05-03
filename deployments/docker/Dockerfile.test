@@ -1,0 +1,9 @@
+FROM golang:1.23-alpine
+
+WORKDIR /src
+RUN apk add --no-cache git ca-certificates
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+CMD ["go", "test", "./tests/integration/...", "-count=1", "-v"]
