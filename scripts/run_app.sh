@@ -3,11 +3,41 @@ set -euo pipefail
 
 # ---------------------------------------------------------------------------
 # run_app.sh — start the stock market API
-# Supports: Linux (amd64/arm64), macOS (amd64/arm64)
-# Requires: Docker Desktop (or Docker Engine + Compose plugin)
+# Usage: ./scripts/run_app.sh [--port PORT] [--platform PLATFORM]
+#   --port      Listening port (default: 8080)
+#   --platform  linux | windows | macos (default: linux)
+#               linux/windows → linux/amd64
+#               macos         → linux/arm64
 # ---------------------------------------------------------------------------
 
-PORT="${APP_PORT:-8080}"
+PORT="8080"
+PLATFORM="linux"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --port)
+            PORT="$2"; shift 2 ;;
+        --platform)
+            PLATFORM="$2"; shift 2 ;;
+        *)
+            echo "Error: unknown argument '$1'"
+            echo "Usage: $0 [--port PORT] [--platform linux|windows|macos]"
+            exit 1 ;;
+    esac
+done
+
+case "$PLATFORM" in
+  linux|windows)
+    DOCKER_PLATFORM="linux/amd64"
+    ;;
+  macos)
+    DOCKER_PLATFORM="linux/arm64"
+    ;;
+  *)
+    echo "Error: unknown platform '$PLATFORM'. Choose: linux, windows, macos"
+    exit 1
+    ;;
+esac
 
 if ! command -v docker &>/dev/null; then
     echo "Error: Docker not found. Install Docker Desktop from https://www.docker.com/products/docker-desktop"
@@ -19,12 +49,17 @@ if ! docker info &>/dev/null 2>&1; then
     exit 1
 fi
 
-echo "Architecture : $(uname -m)"
+echo "Platform     : $PLATFORM ($DOCKER_PLATFORM)"
 echo "Port         : $PORT"
 echo ""
 echo "Building and starting the stock market API..."
 
-APP_PORT="$PORT" docker compose -f deployments/docker-compose.yaml --env-file deployments/.env --project-directory . up --build --wait --detach
+APP_PORT="$PORT" DOCKER_PLATFORM="$DOCKER_PLATFORM" \
+    docker compose \
+        -f deployments/docker-compose.yaml \
+        --env-file deployments/.env \
+        --project-directory . \
+        up --build --wait --detach
 
 echo ""
 echo "API is ready: http://localhost:$PORT"
