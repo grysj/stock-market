@@ -1,42 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
 # ---------------------------------------------------------------------------
 # run_app.sh — start the stock market API
-# Usage: ./scripts/run_app.sh [--port PORT] [--platform PLATFORM]
-#   --port      Listening port (default: 8080)
-#   --platform  linux | windows | macos (default: linux)
-#               linux/windows → linux/amd64
-#               macos         → linux/arm64
+# Usage: ./scripts/run_app.sh [--port PORT] [--arch arm64|x64]
+#   --port  Listening port (default: 8080)
+#   --arch  Target architecture: arm64 or x64 (default: auto-detected)
+#
+# Works on Linux, macOS, and Windows (WSL / Git Bash).
 # ---------------------------------------------------------------------------
 
 PORT="8080"
-PLATFORM="linux"
+ARCH=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --port)
             PORT="$2"; shift 2 ;;
-        --platform)
-            PLATFORM="$2"; shift 2 ;;
+        --arch)
+            ARCH="$2"; shift 2 ;;
         *)
             echo "Error: unknown argument '$1'"
-            echo "Usage: $0 [--port PORT] [--platform linux|windows|macos]"
+            echo "Usage: $0 [--port PORT] [--arch arm64|x64]"
             exit 1 ;;
     esac
 done
 
-case "$PLATFORM" in
-  linux|windows)
-    DOCKER_PLATFORM="linux/amd64"
-    ;;
-  macos)
-    DOCKER_PLATFORM="linux/arm64"
-    ;;
-  *)
-    echo "Error: unknown platform '$PLATFORM'. Choose: linux, windows, macos"
-    exit 1
-    ;;
+if [[ -z "$ARCH" ]]; then
+    case "$(uname -m)" in
+        arm64|aarch64) ARCH="arm64" ;;
+        *)             ARCH="x64" ;;
+    esac
+fi
+
+case "$ARCH" in
+    arm64)       DOCKER_PLATFORM="linux/arm64" ;;
+    x64|amd64)   DOCKER_PLATFORM="linux/amd64" ;;
+    *)
+        echo "Error: unknown arch '$ARCH'. Choose: arm64, x64"
+        exit 1 ;;
 esac
 
 if ! command -v docker &>/dev/null; then
@@ -49,7 +53,7 @@ if ! docker info &>/dev/null 2>&1; then
     exit 1
 fi
 
-echo "Platform     : $PLATFORM ($DOCKER_PLATFORM)"
+echo "Architecture : $ARCH ($DOCKER_PLATFORM)"
 echo "Port         : $PORT"
 echo ""
 echo "Building and starting the stock market API..."
