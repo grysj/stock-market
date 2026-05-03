@@ -13,8 +13,8 @@ A REST API for stock market operations with wallet management, backed by Postgre
 ### 1. Clone the repository
 
 ```bash
-git clone <repo-url>
-cd remitly_task
+git clone git@github.com:grysj/stock-market.git
+cd stock-market
 ```
 
 ### 2. Start the API
