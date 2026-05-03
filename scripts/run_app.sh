@@ -57,7 +57,7 @@ echo "Building and starting the stock market API..."
 APP_PORT="$PORT" DOCKER_PLATFORM="$DOCKER_PLATFORM" \
     docker compose \
         -f deployments/docker-compose.yaml \
-        --env-file deployments/.env \
+        --env-file .env \
         --project-directory . \
         up --build --wait --detach
 
