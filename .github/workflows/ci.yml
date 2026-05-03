@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   build:
@@ -138,3 +140,47 @@ jobs:
             results.xml
             results.json
             coverage.out
+
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+      - name: Start test stack
+        run: docker compose -f deployments/docker-compose.test.yaml --project-directory . up --build --wait --detach
+      - name: Run E2E tests
+        env:
+          BASE_URL: http://localhost:8081
+        run: |
+          gotestsum \
+            --junitfile results.xml \
+            --jsonfile results.json \
+            -- ./tests/e2e/... \
+            -v \
+            -count=1
+      - name: Stop test stack
+        if: always()
+        run: docker compose -f deployments/docker-compose.test.yaml --project-directory . down
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: E2E test results
+          path: results.xml
+          reporter: java-junit
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: |
+            results.xml
+            results.json
