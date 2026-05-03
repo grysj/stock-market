@@ -24,6 +24,7 @@ services:
       - net-app3
 
   app1:
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: deployments/docker/Dockerfile
@@ -50,6 +51,7 @@ services:
       - net-db
 
   app2:
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: deployments/docker/Dockerfile
@@ -76,6 +78,7 @@ services:
       - net-db
 
   app3:
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: deployments/docker/Dockerfile
