@@ -21,6 +21,7 @@ DB_PORT=5433 DB_NAME=stocks_test BASE_URL=http://localhost:8081 \
     go test ./tests/... \
         -v \
         -count=1 \
+        -p 1 \
         -coverprofile="$RESULTS_DIR/coverage.out" \
         -coverpkg=./internal/... \
     | tee "$RESULTS_DIR/tests_result.out"
