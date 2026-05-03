@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 
 	"remitly_task/internal/models"
 )
+
+var walletSeq atomic.Int64
 
 func baseURL() string {
 	if url := os.Getenv("BASE_URL"); url != "" {
@@ -66,8 +69,9 @@ func sellStock(t *testing.T, walletID, stockName string) int {
 }
 
 // uniqueWalletID creates a wallet ID that is unique per test run to avoid state conflicts.
+
 func uniqueWalletID(t *testing.T) string {
-	return fmt.Sprintf("e2e-%s-%d", strings.NewReplacer("/", "-", " ", "-").Replace(t.Name()), time.Now().UnixNano())
+	return fmt.Sprintf("e2e-%d-%s", walletSeq.Add(1), strings.NewReplacer("/", "-", " ", "-").Replace(t.Name()))
 }
 
 // -------------------------------------------------------
@@ -527,14 +531,14 @@ func getWalletStock(t *testing.T, walletID, stock string) (int, string) {
 
 func TestE2E_FullWorkflow(t *testing.T) {
 	// ── 1. Seed the bank with two stock types ──────────────────────────────────
-	t.Log("step 1: seeding bank AAPL=10 GOOG=5")
+	// t.Log("step 1: seeding bank AAPL=10 GOOG=5")
 	setStocks(t, []models.Stock{
 		{Name: "AAPL", Quantity: 10},
 		{Name: "GOOG", Quantity: 5},
 	})
 
 	bank := getBank(t)
-	t.Logf("bank after seed: %v", bank)
+	// t.Logf("bank after seed: %v", bank)
 	assert.Equal(t, int64(10), bank["AAPL"])
 	assert.Equal(t, int64(5), bank["GOOG"])
 
